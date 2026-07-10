@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Environment secrets — never commit real credentials
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/*.log
+npm-debug.log*
+
+# Test coverage
+coverage/
+
+# OS/editor files
+.DS_Store
+.vscode/
+.idea/
+
+# Build artifacts
+dist/
+build/
