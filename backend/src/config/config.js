@@ -55,10 +55,15 @@ const REQUIRED_VARS = [
 // We check `=== undefined` AND an empty string, because a line like
 // `DATABASE_PASSWORD=` in a .env file (key present, but no value typed
 // after the equals sign) would otherwise pass a simple "does the key
-// exist" check while still being useless to the application.
+// exist" check while still being useless to the application.s
 // ----------------------------------------------------------------------------
 const missingVars = REQUIRED_VARS.filter((key) => {
   const value = process.env[key];
+
+  if (key === 'DATABASE_PASSWORD') {
+    return value === undefined;
+  }
+
   return value === undefined || value.trim() === '';
 });
 
