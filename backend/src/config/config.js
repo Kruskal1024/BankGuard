@@ -47,6 +47,8 @@ const REQUIRED_VARS = [
   'RATE_LIMIT_WINDOW_MS',
   'RATE_LIMIT_MAX_ATTEMPTS',
   'FRAUD_LARGE_TXN_THRESHOLD',
+  'CORS_ALLOWED_ORIGINS',
+  'COOKIE_SECRET',
 ];
 
 // ----------------------------------------------------------------------------
@@ -55,11 +57,12 @@ const REQUIRED_VARS = [
 // We check `=== undefined` AND an empty string, because a line like
 // `DATABASE_PASSWORD=` in a .env file (key present, but no value typed
 // after the equals sign) would otherwise pass a simple "does the key
-// exist" check while still being useless to the application.s
+// exist" check while still being useless to the application.
 // ----------------------------------------------------------------------------
 const missingVars = REQUIRED_VARS.filter((key) => {
   const value = process.env[key];
 
+  // Allow an empty password for local XAMPP development.
   if (key === 'DATABASE_PASSWORD') {
     return value === undefined;
   }
@@ -85,7 +88,8 @@ if (missingVars.length > 0) {
 // ----------------------------------------------------------------------------
 // STEP 3: Build one clean, grouped configuration object.
 //
-// Grouping by concern (server / database / jwt / email / rateLimit /
+// Grouping by concern (server / cors / cookie / database / jwt / email /
+// rateLimit / fraud)
 // fraud) rather than exporting 18 flat variables means calling code reads
 // naturally: `config.database.host` instead of `config.DATABASE_HOST` —
 // and it mirrors how these values are actually used together elsewhere
@@ -102,6 +106,25 @@ const config = {
   server: {
     port: Number(process.env.PORT),
     nodeEnv: process.env.NODE_ENV,
+  },
+
+  // CORS_ALLOWED_ORIGINS is a comma-separated string in .env (e.g.
+  // "http://localhost:4200,http://localhost:3000"). We split and trim it
+  // here — ONCE — so every file that needs it (app.js) receives a clean
+  // array, rather than each caller having to remember to split the string
+  // itself. This is exactly why config.js exists: parsing logic like this
+  // lives in one place, not duplicated wherever the value is used.
+  cors: {
+    allowedOrigins: process.env.CORS_ALLOWED_ORIGINS.split(',').map((origin) => origin.trim()),
+  },
+
+  // Kept as its own group, separate from jwt, even though both are
+  // "secrets" conceptually — cookie-parser's signing secret and our JWT
+  // signing secrets serve different purposes and should never be the same
+  // value. Keeping them in visibly separate config groups makes it obvious
+  // in code review if someone ever accidentally reused one for the other.
+  cookie: {
+    secret: process.env.COOKIE_SECRET,
   },
 
   database: {
