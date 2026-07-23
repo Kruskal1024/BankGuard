@@ -2,11 +2,11 @@
   "name": "bankguard-backend",
   "version": "1.0.0",
   "description": "BankGuard — secure enterprise banking fraud detection and security monitoring platform",
-  "main": "server.js",
+  "main": "src/server.js",
   "type": "module",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js",
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
     "test": "jest",
     "test:watch": "jest --watch"
   },
