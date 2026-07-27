@@ -24,6 +24,11 @@
 import { pool } from '../config/database.js';
 import logger from '../utils/logger.js';
 import AppError from '../utils/AppError.js';
+// ----------------------------------------------------------------------------
+// Login security settings
+// ----------------------------------------------------------------------------
+const MAX_FAILED_LOGIN_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MINUTES = 15;
 
 // ============================================================================
 // SQL INJECTION PREVENTION & PARAMETERIZED QUERIES
@@ -182,6 +187,48 @@ export async function updateLastLogin(userId) {
 // emailExists: a lightweight true/false check, used during registration
 // to give a fast, clear error before even attempting a full insert.
 // ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// recordFailedLogin: increments failed login attempts and locks the account
+// after too many failed attempts.
+// ----------------------------------------------------------------------------
+export async function recordFailedLogin(userId) {
+  const [result] = await pool.execute(
+    `UPDATE users
+     SET failed_login_count = failed_login_count + 1,
+         locked_until = CASE
+           WHEN failed_login_count >= ? THEN DATE_ADD(NOW(), INTERVAL ? MINUTE)
+           ELSE locked_until
+         END
+     WHERE user_id = ? AND deleted_at IS NULL`,
+    [MAX_FAILED_LOGIN_ATTEMPTS, LOCKOUT_DURATION_MINUTES, userId]
+  );
+
+  if (result.affectedRows === 0) {
+    throw new AppError('User not found', 404);
+  }
+
+  return true;
+}
+
+// ----------------------------------------------------------------------------
+// resetFailedLoginAttempts: clears the failed login counter after a
+// successful login.
+// ----------------------------------------------------------------------------
+export async function resetFailedLoginAttempts(userId) {
+  const [result] = await pool.execute(
+    `UPDATE users
+     SET failed_login_count = 0,
+         locked_until = NULL
+     WHERE user_id = ? AND deleted_at IS NULL`,
+    [userId]
+  );
+
+  if (result.affectedRows === 0) {
+    throw new AppError('User not found', 404);
+  }
+
+  return true;
+}
 export async function emailExists(email) {
   // COUNT(*) with a LIMIT 1 (implicit here since we only need to know
   // "at least one exists," not how many) is intentionally the cheapest
